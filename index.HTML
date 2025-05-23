@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard Pemantauan Bendungan</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #0055aa;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    nav {
+      display: flex;
+      justify-content: center;
+      background-color: #003f7f;
+    }
+    nav button {
+      background: none;
+      border: none;
+      color: white;
+      padding: 14px 20px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    nav button:hover {
+      background-color: #0055aa;
+    }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      color: #555;
+    }
+    input[type="number"], input[type="file"], input[type="date"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      background-color: #28a745;
+      color: white;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    .result {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 18px;
+      color: #0056b3;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Dashboard Pemantauan Bendungan</h1>
+  </header>
+  <nav>
+    <button onclick="showSection('retakan')">Deteksi Retakan</button>
+    <button onclick="showSection('curah')">Prediksi Curah Hujan</button>
+    <button onclick="showSection('tampung')">Prediksi Daya Tampung</button>
+    <button onclick="showSection('kelayakan')">Prediksi Kelayakan</button>
+  </nav>
+
+  <div class="container" id="retakan">
+    <h2>🔍 Deteksi Retakan Bendungan</h2>
+    <label for="tanggalRetakan">Tanggal Pemeriksaan</label>
+    <input type="date" id="tanggalRetakan" required>
+    <input type="file" id="imageInput" accept="image/*">
+    <img id="preview" src="#" alt="Preview Gambar" style="display: none; max-width: 100%; margin-top: 10px; border: 2px dashed #ccc; border-radius: 8px;">
+    <button onclick="deteksiRetakan()">Deteksi Retakan</button>
+    <button onclick="rekapExcelRetakan()">Rekap ke Excel</button>
+    <div class="result" id="resultRetakan">[Status retakan akan muncul di sini]</div>
+  </div>
+
+  <div class="container hidden" id="curah">
+    <h2>🌧️ Prediksi Curah Hujan</h2>
+    <label for="tanggalCurah">Tanggal Pengukuran</label>
+    <input type="date" id="tanggalCurah" required>
+    <form id="rfForm">
+      <label for="suhu">Suhu Udara (°C)</label>
+      <input type="number" step="any" id="suhu" required>
+
+      <label for="kelembaban">Kelembaban (%)</label>
+      <input type="number" step="any" id="kelembaban" required>
+
+      <label for="tekanan">Tekanan Udara (hPa)</label>
+      <input type="number" step="any" id="tekanan" required>
+
+      <label for="kecepatan_angin">Kecepatan Angin (km/jam)</label>
+      <input type="number" step="any" id="kecepatan_angin" required>
+
+      <button type="submit">Prediksi (Random Forest)</button>
+    </form>
+    <button onclick="rekapExcelCurah()">Rekap ke Excel</button>
+    <div class="result" id="hasilRF">[Hasil prediksi akan muncul di sini]</div>
+  </div>
+
+  <div class="container hidden" id="tampung">
+    <h2>🏞️ Prediksi Daya Tampung Bendungan</h2>
+    <label for="tanggalTampung">Tanggal Pengukuran</label>
+    <input type="date" id="tanggalTampung" required>
+    <form id="prediksiTampungForm">
+      <label for="curah_hujan">Curah Hujan (mm)</label>
+      <input type="number" step="any" id="curah_hujan" required>
+
+      <label for="luas_DAS">Luas DAS (km²)</label>
+      <input type="number" step="any" id="luas_DAS" required>
+
+      <label for="tinggi_bendung">Tinggi Bendung (m)</label>
+      <input type="number" step="any" id="tinggi_bendung" required>
+
+      <label for="volume_masuk">Volume Masuk (m³)</label>
+      <input type="number" step="any" id="volume_masuk" required>
+
+      <button type="submit">Prediksi</button>
+    </form>
+    <button onclick="rekapExcelTampung()">Rekap ke Excel</button>
+    <div class="result" id="hasilTampung">[Hasil prediksi akan muncul di sini]</div>
+  </div>
+
+  <div class="container hidden" id="kelayakan">
+    <h2>✅ Prediksi Kelayakan Bendungan</h2>
+    <label for="tanggalKelayakan">Tanggal Pengukuran</label>
+    <input type="date" id="tanggalKelayakan" required>
+    <form id="prediksiKelayakanForm">
+      <label for="tinggiAir">Tinggi Air (%)</label>
+      <input type="number" id="tinggiAir" min="0" max="100" required value="50" />
+
+      <label for="curahHujan">Curah Hujan (mm)</label>
+      <input type="number" id="curahHujan" min="0" max="1000" required value="200" />
+
+      <label for="umur">Umur Bendungan (tahun)</label>
+      <input type="number" id="umur" min="0" max="150" required value="30" />
+
+      <label for="frekuensiBuka">Frekuensi Pintu Dibuka / Bulan</label>
+      <input type="number" id="frekuensiBuka" min="0" max="30" required value="5" />
+
+      <label for="kondisiStruktur">Kondisi Struktur (1=buruk, 5=baik)</label>
+      <input type="number" id="kondisiStruktur" min="1" max="5" required value="4" />
+
+      <button type="submit">Prediksi</button>
+    </form>
+    <button onclick="rekapExcelKelayakan()">Rekap ke Excel</button>
+    <div class="result" id="hasilKelayakan">[Hasil prediksi akan muncul di sini]</div>
+  </div>
+
+  <!-- SheetJS Library for Excel Export -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+  <script>
+    function showSection(id) {
+      const sections = ['retakan', 'curah', 'tampung', 'kelayakan'];
+      sections.forEach(section => {
+        document.getElementById(section).classList.add('hidden');
+      });
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    // Deteksi Retakan
+    const imageInput = document.getElementById("imageInput");
+    const preview = document.getElementById("preview");
+    const resultRetakan = document.getElementById("resultRetakan");
+
+    imageInput.addEventListener("change", function() {
+      const file = imageInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          preview.src = e.target.result;
+          preview.style.display = "block";
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    function deteksiRetakan() {
+      const klasifikasi = ["Tidak Retak", "Retak Ringan", "Retak Sedang", "Retak Parah"];
+      const index = Math.floor(Math.random() * klasifikasi.length);
+      const status = klasifikasi[index];
+
+      let saran = "";
+      switch(index) {
+        case 0: saran = "Pantau berkala dan dokumentasikan."; break;
+        case 1: saran = "Lakukan injeksi epoxy atau tambalan permukaan."; break;
+        case 2: saran = "Perlu perbaikan struktural sebagian."; break;
+        case 3: saran = "Evakuasi dan audit struktur segera!"; break;
+      }
+
+      resultRetakan.innerHTML = `🧱 Status: <b>${status}</b><br>📋 Penanganan: ${saran}`;
+    }
+
+    // Prediksi Curah Hujan
+    document.getElementById('rfForm').addEventListener('submit', function(e){
+      e.preventDefault();
+
+      const suhu = parseFloat(document.getElementById('suhu').value);
+      const kelembaban = parseFloat(document.getElementById('kelembaban').value);
+      const tekanan = parseFloat(document.getElementById('tekanan').value);
+      const angin = parseFloat(document.getElementById('kecepatan_angin').value);
+
+      const prediksi = (kelembaban * 0.4 + suhu * 0.2 + tekanan * 0.1 + angin * 0.3) / 2;
+
+      let kategori = '';
+      if (prediksi < 30) kategori = 'Tidak Hujan';
+      else if (prediksi < 60) kategori = 'Hujan Ringan';
+      else if (prediksi < 80) kategori = 'Hujan Sedang';
+      else kategori = 'Hujan Lebat';
+ 
+      document.getElementById('hasilRF').innerHTML = `🌦️ Estimasi Curah Hujan: <b>${prediksi.toFixed(2)} mm</b><br>📝 Kategori: <b>${kategori}</b>`;
+    });
+
+    // Prediksi Daya Tampung Bendungan
+    document.getElementById('prediksiTampungForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const curah = parseFloat(document.getElementById('curah_hujan').value);
+      const luas = parseFloat(document.getElementById('luas_DAS').value);
+      const tinggi = parseFloat(document.getElementById('tinggi_bendung').value);
+      const volume = parseFloat(document.getElementById('volume_masuk').value);
+
+      const dayaTampung = curah * luas * tinggi * 0.001 + volume;
+
+      document.getElementById('hasilTampung').innerHTML = `📊 Perkiraan Daya Tampung: <b>${dayaTampung.toFixed(2)} m³</b>`;
+    });
+
+    // Prediksi Kelayakan Bendungan
+    document.getElementById('prediksiKelayakanForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const tinggiAir = parseFloat(document.getElementById('tinggiAir').value);
+      const curahHujan = parseFloat(document.getElementById('curahHujan').value);
+      const umur = parseFloat(document.getElementById('umur').value);
+      const frekuensiBuka = parseFloat(document.getElementById('frekuensiBuka').value);
+      const kondisi = parseFloat(document.getElementById('kondisiStruktur').value);
+
+      const skor = (100 - tinggiAir) * 0.2 + (1000 - curahHujan) * 0.1 + (150 - umur) * 0.2 + (30 - frekuensiBuka) * 0.2 + kondisi * 20;
+      
+      let status = '';
+      if (skor >= 80) status = 'Layak Operasi';
+      else if (skor >= 60) status = 'Perlu Pemantauan';
+      else status = 'Tidak Layak, Butuh Audit';
+
+      document.getElementById('hasilKelayakan').innerHTML = `🔧 Skor Kelayakan: <b>${skor.toFixed(1)}</b><br>✅ Status: <b>${status}</b>`;
+    });
+
+    // FUNGSI REKAP EXCEL
+
+    function rekapExcelRetakan() {
+      const tanggal = document.getElementById('tanggalRetakan').value;
+      if(!tanggal){
+        alert('Mohon isi tanggal pemeriksaan terlebih dahulu.');
+        return;
+      }
+      const statusText = resultRetakan.innerHTML;
+      if(statusText.includes('[Status retakan')){
+        alert('Mohon lakukan deteksi retakan terlebih dahulu.');
+        return;
+      }
+
+      const ws_data = [
+        ["Tanggal Pemeriksaan", "Status Retakan & Penanganan"],
+        [tanggal, statusText.replace(/<[^>]+>/g, '')]  // hapus tag html
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Deteksi Retakan");
+
+      XLSX.writeFile(wb, `Rekap_Deteksi_Retakan_${tanggal}.xlsx`);
+    }
+
+    function rekapExcelCurah() {
+      const tanggal = document.getElementById('tanggalCurah').value;
+      if(!tanggal){
+        alert('Mohon isi tanggal pengukuran terlebih dahulu.');
+        return;
+      }
+      const suhu = document.getElementById('suhu').value;
+      const kelembaban = document.getElementById('kelembaban').value
+      const tekanan = document.getElementById('tekanan').value;
+      const angin = document.getElementById('kecepatan_angin').value;
+      const hasil = document.getElementById('hasilRF').innerText;
+
+      if (hasil.includes('[Hasil prediksi')) {
+        alert('Mohon lakukan prediksi curah hujan terlebih dahulu.');
+        return;
+      }
+
+      const ws_data = [
+        ["Tanggal Pengukuran", "Suhu (°C)", "Kelembaban (%)", "Tekanan (hPa)", "Kecepatan Angin (km/jam)", "Hasil Prediksi"],
+        [tanggal, suhu, kelembaban, tekanan, angin, hasil]
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Prediksi Curah Hujan");
+
+      XLSX.writeFile(wb, `Rekap_Curah_Hujan_${tanggal}.xlsx`);
+    }
+
+    function rekapExcelTampung() {
+      const tanggal = document.getElementById('tanggalTampung').value;
+      if (!tanggal) {
+        alert('Mohon isi tanggal pengukuran terlebih dahulu.');
+        return;
+      }
+      const curah = document.getElementById('curah_hujan').value;
+      const luas = document.getElementById('luas_DAS').value;
+      const tinggi = document.getElementById('tinggi_bendung').value;
+      const volume = document.getElementById('volume_masuk').value;
+      const hasil = document.getElementById('hasilTampung').innerText;
+
+      if (hasil.includes('[Hasil prediksi')) {
+        alert('Mohon lakukan prediksi daya tampung terlebih dahulu.');
+        return;
+      }
+
+      const ws_data = [
+        ["Tanggal Pengukuran", "Curah Hujan (mm)", "Luas DAS (km²)", "Tinggi Bendung (m)", "Volume Masuk (m³)", "Hasil Prediksi"],
+        [tanggal, curah, luas, tinggi, volume, hasil]
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Prediksi Daya Tampung");
+
+      XLSX.writeFile(wb, `Rekap_Daya_Tampung_${tanggal}.xlsx`);
+    }
+
+    function rekapExcelKelayakan() {
+      const tanggal = document.getElementById('tanggalKelayakan').value;
+      if (!tanggal) {
+        alert('Mohon isi tanggal pengukuran terlebih dahulu.');
+        return;
+      }
+      const tinggiAir = document.getElementById('tinggiAir').value;
+      const curahHujan = document.getElementById('curahHujan').value;
+      const umur = document.getElementById('umur').value;
+      const frekuensiBuka = document.getElementById('frekuensiBuka').value;
+      const kondisi = document.getElementById('kondisiStruktur').value;
+      const hasil = document.getElementById('hasilKelayakan').innerText;
+
+      if (hasil.includes('[Hasil prediksi')) {
+        alert('Mohon lakukan prediksi kelayakan terlebih dahulu.');
+        return;
+      }
+
+      const ws_data = [
+        ["Tanggal Pengukuran", "Tinggi Air (%)", "Curah Hujan (mm)", "Umur (tahun)", "Frekuensi Pintu Dibuka / Bulan", "Kondisi Struktur (1-5)", "Hasil Prediksi"],
+        [tanggal, tinggiAir, curahHujan, umur, frekuensiBuka, kondisi, hasil]
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Prediksi Kelayakan");
+
+      XLSX.writeFile(wb, `Rekap_Kelayakan_Bendungan_${tanggal}.xlsx`);
+    }
+  </script>
+</body>
+</html>
